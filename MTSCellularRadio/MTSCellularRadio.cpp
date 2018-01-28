@@ -790,26 +790,35 @@ std::vector<MTSCellularRadio::Sms> MTSCellularRadio::get_received_sms()
             sms.phone_number = vSmsParts[2];
             sms.timestamp = vSmsParts[4] + ", " + vSmsParts[5];
         } else if (_type == MTQ_EV3 || _type == MTQ_C2 || _type == MTQ_LVW3) {
-            /* format for EV3 and EV3-IP radios
-             * <index>, <status>, <oa>, <callback>, <date>
-             * splitting on commas should give us 5 items
-             */
-            if(vSmsParts.size() != 5) {
-                logWarning("Expected 4 commas. SMS[%d] DATA[%s]. Continuing ...", smsNumber, line.c_str());
-                continue;
-            }
-            
-            sms.phone_number = vSmsParts[2];
-            /* timestamp is in a nasty format
-             * YYYYMMDDHHMMSS
-             * nobody wants to try and decipher that, so format it nicely
-             * YY/MM/DD,HH:MM:SS
-             */
-            string s = vSmsParts[4];
-            if (_type == MTQ_LVW3) {
-                sms.timestamp = s.substr(3,2) + "/" + s.substr(5,2) + "/" + s.substr(7,2) + ", " + s.substr(9,2) + ":" + s.substr(11,2) + ":" + s.substr(13,2);
+            if (vSmsParts.size() == 5) {
+                /* format for EV3 and EV3-IP radios
+                 * <index>, <status>, <oa>, <callback>, <date>
+                 * splitting on commas should give us 5 items
+                 */
+                sms.phone_number = vSmsParts[2];
+                /* timestamp is in a nasty format
+                 * YYYYMMDDHHMMSS
+                 * nobody wants to try and decipher that, so format it nicely
+                 * YY/MM/DD,HH:MM:SS
+                 */
+                string s = vSmsParts[4];
+                if (_type == MTQ_LVW3) {
+                    sms.timestamp = s.substr(3,2) + "/" + s.substr(5,2) + "/" + s.substr(7,2) + ", " + s.substr(9,2) + ":" + s.substr(11,2) + ":" + s.substr(13,2);
+                } else {
+                    sms.timestamp = s.substr(2,2) + "/" + s.substr(4,2) + "/" + s.substr(6,2) + ", " + s.substr(8,2) + ":" + s.substr(10,2) + ":" + s.substr(12,2);
+                }
+            } else if (vSmsParts.size() == 6) {
+                /*
+                 * <index>, <status>, <oa>, <alpha>, <scts>
+                 * scts contains a comma, so splitting on commas should give us 6 items
+                 * timestamp is already formatted
+                 */
+                 sms.phone_number = vSmsParts[2];
+
+                 sms.timestamp = vSmsParts[4] + ", " + vSmsParts[5];
             } else {
-                sms.timestamp = s.substr(2,2) + "/" + s.substr(4,2) + "/" + s.substr(6,2) + ", " + s.substr(8,2) + ":" + s.substr(10,2) + ":" + s.substr(12,2);
+                logWarning("Expected 4 or 5 commas. SMS[%d] DATA[%s]. Continuing ...", smsNumber, line.c_str());
+                continue;
             }
         }
 
